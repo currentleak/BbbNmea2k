@@ -42,12 +42,12 @@ bool BbbCan::WriteHeading(double heading)
     CanFrame.can_dlc = CAN_MAX_DLEN;
 
     int16_t h;
-    heading = heading / 180.0 * 3.1415926535897932384626433832795;
+    heading = heading / 180.0 * 3.1415926535897932384626433832795; // convert to radian
     heading = heading * (1 / 0.0001);
     h = (int16_t)heading;
 
     CanFrame.data[0] = 0xFF;
-    CanFrame.data[1] = (__u8)(h);
+    CanFrame.data[1] = (__u8)h;
     CanFrame.data[2] = (__u8)(h >> 8);
     CanFrame.data[3] = 0xFF;
     CanFrame.data[4] = 0xFF;
@@ -63,7 +63,7 @@ bool BbbCan::WriteRoll(double roll)
     CanFrame.can_dlc = CAN_MAX_DLEN;
     
     int16_t r;
-    roll = roll / 180.0 * 3.1415926535897932384626433832795;
+    roll = roll / 180.0 * 3.1415926535897932384626433832795;  // convert to radian
     roll = roll *(1 / 0.0001); 
     r = (int16_t)roll;
 

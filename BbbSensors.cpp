@@ -40,7 +40,6 @@ MPU9250Calib::MPU9250Calib(char* calib)
     // todo
 }
 
-
 bool BbbSensors::InitSensors()
 {
     return InitMPU9250() && InitBMP280();
@@ -146,57 +145,7 @@ bool BbbSensors::CheckSensorID(char addrToCheck, char regToCheck, char dataToChe
     }
 }
 
-int BbbSensors::ReadChars(char I2cAddress, char regAddress, char* data, int nbrChars)
-{
-    if (ioctl(file, I2C_SLAVE, I2cAddress) < 0) // Sensor's I2C address 
-    {
-        perror("Failed to acquire bus access and/or talk to slave.\n");
-        return -1;
-    }
-
-    for (int i = 0; i < nbrChars; i++)
-    {
-        if (write(file, &regAddress, 1) != 1)
-        {
-            perror("Failed to write the i2c bus\n");
-            return -1;
-        }
-        if (read(file, &data[i], 1) != 1)
-        {
-            perror("Failed to read from the i2c bus.\n");
-            return -1;
-        }
-        //cout << "--Data: " << to_string(data[i]) << endl;
-        regAddress = regAddress + 1;
-    }
-  
-    return nbrChars;
-}
-
-int BbbSensors::WriteChars(char I2cAddress, char regAddress, char* data, int nbrChars)
-{
-    char packet[32] = { 0 }; // reg address + data
-
-    packet[0] = regAddress;
-    for (int i = 1; i <= nbrChars; i++)
-    {
-        packet[i] = data[i - 1];
-    }
-
-    if (ioctl(file, I2C_SLAVE, I2cAddress) < 0) // Sensor's I2C address 
-    {
-        perror("Failed to acquire bus access and/or talk to slave.\n");
-        return -1;
-    }
-    if (write(file, packet, nbrChars+1) != nbrChars+1) // write data
-    {
-        perror("Failed to write the i2c bus\n");
-        return -1;
-    }
-    return nbrChars;
-}
-
-// return pressure in deg hPa, from the BMP280
+// Return PRESSURE in deg hPa, from the BMP280
 double BbbSensors::getPressureHpa()
 {
     char data[3] = { 0, 0, 0 };
@@ -227,14 +176,14 @@ double BbbSensors::getPressureHpa()
     pressure = (double)p / 25600.0;
     return pressure;
 }
-
+// Calculate Altitude
 double BbbSensors::getAltitude()
 {
     double altitude = 145366.45f * (1.0f - pow((getPressureHpa() / 1013.25f), 0.190284f));
     return altitude;
 }
 
-// return temperature in deg C, from the BMP280
+// Return TEMPERATURE in deg C, from the BMP280
 double BbbSensors::getTemp1()
 {
     char data[3] = { 0, 0, 0 };
@@ -256,6 +205,7 @@ double BbbSensors::getTemp1()
     return temperature;
 }
 
+// Return MAG field
 bool BbbSensors::getMagneto(double* magneto)
 {
     int16_t magnetoWord[3] = { 0, 0, 0 };
@@ -280,7 +230,7 @@ bool BbbSensors::getMagneto(double* magneto)
     magneto[2] = (double)magnetoWord[2] * MPU9250Cal->MPU9250mRes * MPU9250Cal->magCalibration[2] - MPU9250Cal->MPU9250magBias[2];
     return true;
 }
-
+// Calculate Heading
 double BbbSensors::getHeading()
 {
     double heading;
@@ -294,20 +244,20 @@ bool BbbSensors::getHeading(double* heading)
 {
     double magneto[3] = { 0, 0, 0 };
     getMagneto(magneto);
+    double xAngle = atan2(magneto[0], sqrt(pow(magneto[1], 2) + pow(magneto[2], 2)));
+    double yAngle = atan2(magneto[1], sqrt(pow(magneto[0], 2) + pow(magneto[2], 2)));
+    double zAngle = atan2(magneto[2], sqrt(pow(magneto[0], 2) + pow(magneto[1], 2)));
 
-    double xAngle = atan(magneto[0] / sqrt(pow(magneto[1], 2) + pow(magneto[2], 2)));
-    double yAngle = atan(magneto[1] / sqrt(pow(magneto[0], 2) + pow(magneto[2], 2)));
-    double zAngle = atan(magneto[2] / sqrt(pow(magneto[0], 2) + pow(magneto[1], 2)));
-    xAngle = xAngle * 360 / 2 * M_PI;  // convert radian to deg
-    yAngle = yAngle * 360 / 2 * M_PI;
-    zAngle = zAngle * 360 / 2 * M_PI;
+    xAngle = xAngle * 180 / M_PI;  // convert radian to deg
+    yAngle = yAngle * 180 / M_PI;
+    zAngle = zAngle * 180 / M_PI;
     heading[0] = (double)xAngle;
     heading[1] = (double)yAngle;
     heading[2] = (double)zAngle;
-
     return true; // in deg
 }
 
+// Return GYRO
 bool BbbSensors::getGyro(double* gyro)
 {
     int16_t gyroWord[3] = { 0, 0, 0 };
@@ -318,6 +268,7 @@ bool BbbSensors::getGyro(double* gyro)
     return true;
 }
 
+// Return ACCEL
 bool BbbSensors::getAccel(double* accel)
 {
     int16_t accelWord[3] = { 0, 0, 0 };
@@ -328,20 +279,24 @@ bool BbbSensors::getAccel(double* accel)
     accel[2] = (double)accelWord[2] * MPU9250Cal->MPU9250aRes - MPU9250Cal->MPU9250accelBias[2];
     return true;
 }
-
+// Calculate Angle
 bool BbbSensors::getAngle(double* angle)
 {
     double acceleration[3] = { 0, 0, 0 }; // acceleratiopn X, Y, Z
     getAccel(acceleration);
-    double xAngle = atan(acceleration[0] / sqrt(pow(acceleration[1], 2) + pow(acceleration[2], 2)));
-    double yAngle = atan(acceleration[1] / sqrt(pow(acceleration[0], 2) + pow(acceleration[2], 2)));
-    double zAngle = atan(acceleration[2] / sqrt(pow(acceleration[0], 2) + pow(acceleration[1], 2)));
-    xAngle = xAngle * 360 / 2 * M_PI;  // convert radian to deg
-    yAngle = yAngle * 360 / 2 * M_PI;
-    zAngle = zAngle * 360 / 2 * M_PI;
-    angle[0] = (double)xAngle * 0.1;
-    angle[1] = (double)yAngle * 0.1;
-    angle[2] = (double)zAngle * 0.1;
+    double xAngle = atan2(acceleration[0], sqrt(pow(acceleration[1], 2) + pow(acceleration[2], 2)));
+    double yAngle = atan2(acceleration[1], sqrt(pow(acceleration[0], 2) + pow(acceleration[2], 2)));
+    double zAngle = atan2(acceleration[2], sqrt(pow(acceleration[0], 2) + pow(acceleration[1], 2)));
+    if (xAngle > M_PI) xAngle = xAngle - (M_PI);
+    if (yAngle > M_PI) yAngle = yAngle - (M_PI);
+    if (zAngle > M_PI) zAngle = zAngle - (M_PI);
+
+    xAngle = xAngle * 180 / M_PI;  // convert radian to deg
+    yAngle = yAngle * 180 / M_PI;
+    zAngle = zAngle * 180 / M_PI;
+    angle[0] = (double)xAngle;
+    angle[1] = (double)yAngle;
+    angle[2] = (double)zAngle;
     return true;
 }
 
@@ -376,4 +331,54 @@ bool BbbSensors::getXYZWordLitEndian(char address, char reg, int16_t* data)
     data[1] = ((int16_t)c[3] << 8) | c[2];  // Data stored as little Endian
     data[2] = ((int16_t)c[5] << 8) | c[4];  // XLSB, XMSB;  YLSB, YMSB; ZLSB, ZMSB
     return true;
+}
+
+int BbbSensors::ReadChars(char I2cAddress, char regAddress, char* data, int nbrChars)
+{
+    if (ioctl(file, I2C_SLAVE, I2cAddress) < 0) // Sensor's I2C address 
+    {
+        perror("Failed to acquire bus access and/or talk to slave.\n");
+        return -1;
+    }
+
+    for (int i = 0; i < nbrChars; i++)
+    {
+        if (write(file, &regAddress, 1) != 1)
+        {
+            perror("Failed to write the i2c bus\n");
+            return -1;
+        }
+        if (read(file, &data[i], 1) != 1)
+        {
+            perror("Failed to read from the i2c bus.\n");
+            return -1;
+        }
+        //cout << "--Data: " << to_string(data[i]) << endl;
+        regAddress = regAddress + 1;
+    }
+
+    return nbrChars;
+}
+
+int BbbSensors::WriteChars(char I2cAddress, char regAddress, char* data, int nbrChars)
+{
+    char packet[32] = { 0 }; // reg address + data
+
+    packet[0] = regAddress;
+    for (int i = 1; i <= nbrChars; i++)
+    {
+        packet[i] = data[i - 1];
+    }
+
+    if (ioctl(file, I2C_SLAVE, I2cAddress) < 0) // Sensor's I2C address 
+    {
+        perror("Failed to acquire bus access and/or talk to slave.\n");
+        return -1;
+    }
+    if (write(file, packet, nbrChars + 1) != nbrChars + 1) // write data
+    {
+        perror("Failed to write the i2c bus\n");
+        return -1;
+    }
+    return nbrChars;
 }

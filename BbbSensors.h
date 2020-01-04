@@ -105,6 +105,7 @@ public:
 	bool getAngle(double* angle);
 	double getTemp2(); // get temperature from MPU9250
 
+	uint avg = 4;
 
 private:
 	class BMP280Calib* BMPCal;
