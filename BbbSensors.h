@@ -1,4 +1,28 @@
 #pragma once
+#include <memory>
+#include <stdexcept>
+#include <array>
+
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+//#include <string.h>
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <unistd.h>
+#include <linux/i2c-dev.h>
+#include <sys/ioctl.h> 
+//#include <glib.h>
+//#include <glib/gprintf.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+#include <cmath>
+
 
 #define I2C_ADDRESS_MPU9250			0x68	// MPU9250 address when ADO = 1
 #define I2C_ADDRESS_AK8963			0x0C    // Address of AK8963 (MPU9250) magnetometer

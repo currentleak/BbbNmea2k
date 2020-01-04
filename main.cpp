@@ -1,8 +1,7 @@
 ﻿#include <memory>
 #include <stdexcept>
 #include <array>
-//#include <thread>
-//#include <pthread.h>
+#include <signal.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -16,16 +15,7 @@
 #include "BbbSensors.h"
 #include "BbbCan.h"
 
-//#define DEBUG
-
 using namespace std;
-
-//void *rn() // BbbCan* can, MsgNMEA2k* msg)
-//{
-//    //can->ReadNMEA2k(msg);
-//
-//    cout << "Thread" << endl;
-//}
 
 int main()
 {
@@ -115,38 +105,29 @@ int main()
         CanBus->WriteRoll(angle[0]);
         
 
-
-
-
-
-        //int rc;
-        //pthread_t ThreadReadCan;
-        //long t = 0;
-        //rc = pthread_create(&ThreadReadCan, NULL, rn, (void*)t); // , std::ref(CanBus), std::ref(message));
-        //ThreadReadCan.join();
-
         int counter = 0;
         pid_t pid = fork();
         if (pid == 0)
         {
             // child process
-            while (1)
-            {
-                CanBus->WriteHeading(Sensors->getHeading());
-                Sensors->getAngle(angle);
-                CanBus->WriteRoll(angle[0]);
-                usleep(2000000);
-            }
-
-        }
-        else if (pid > 0)
-        {
-            // parent process
             MsgNMEA2k* message = new MsgNMEA2k();
             while (1)
             {
                 CanBus->ReadNMEA2k(message);
                 cout << message->parameter << " " << to_string(message->value) << endl;
+                usleep(2000);
+            }
+        }
+        else if (pid > 0)
+        {
+            // parent process
+            while (1)
+            {
+                CanBus->WriteHeading(Sensors->getHeading());
+                usleep(250000);
+                Sensors->getAngle(angle);
+                CanBus->WriteRoll(angle[0]);
+                usleep(250000);
             }
         }
         else
@@ -156,19 +137,7 @@ int main()
             return 1;
         }
 
-
-
-
-        
-
-#ifdef DEBUG
-        //usleep(500000);
-        if (getchar() == 'q')
-            return 0;
-    }
-#endif // DEBUG
-
-    
+        //kill(0, SIGKILL);
 
     return 0;
 }

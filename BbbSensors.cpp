@@ -1,27 +1,3 @@
-#include <memory>
-#include <stdexcept>
-#include <array>
-
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-//#include <string.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-
-#include <unistd.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h> 
-//#include <glib.h>
-//#include <glib/gprintf.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include <cmath>
-
 #include "BbbSensors.h"
 
 using namespace std;
@@ -312,7 +288,7 @@ double BbbSensors::getHeading()
     getMagneto(magneto);
     heading = atan2(magneto[1], magneto[0]) * 180 / M_PI;
         
-    return heading;
+    return heading; // in deg
 }
 bool BbbSensors::getHeading(double* heading)
 {
@@ -329,7 +305,7 @@ bool BbbSensors::getHeading(double* heading)
     heading[1] = (double)yAngle;
     heading[2] = (double)zAngle;
 
-    return true;
+    return true; // in deg
 }
 
 bool BbbSensors::getGyro(double* gyro)
@@ -380,7 +356,7 @@ double BbbSensors::getTemp2()
     temp16 = (uint16_t)data[0] * 256 + (uint16_t)data[1];
     temperature = (double)temp16 / 333.87 + 21.0;
 
-    return temperature;
+    return temperature; // in degC
 }
 
 bool BbbSensors::getXYZWordBigEndian(char address, char reg, int16_t* data)
