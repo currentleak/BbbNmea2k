@@ -45,13 +45,14 @@
 //#define MPU9250_GYRO_YOUT_L		0x46
 //#define MPU9250_GYRO_ZOUT_H		0x47
 //#define MPU9250_GYRO_ZOUT_L		0x48
-#define MPU9250_PWR_MGMT_1			0x6B
-#define MPU9250_SMPLRT_DIV       0x19
-#define MPU9250_CONFIG           0x1A
-#define MPU9250_GYRO_CONFIG      0x1B
-#define MPU9250_ACCEL_CONFIG     0x1C
-#define MPU9250_ACCEL_CONFIG2    0x1D
-#define MPU9250_INT_PIN_CFG      0x37
+#define MPU9250_PWR_MGMT_1		0x6B
+#define MPU9250_SMPLRT_DIV      0x19
+#define MPU9250_CONFIG          0x1A
+#define MPU9250_GYRO_CONFIG     0x1B
+#define MPU9250_ACCEL_CONFIG    0x1C
+#define MPU9250_ACCEL_CONFIG2   0x1D
+#define MPU9250_INT_PIN_CFG     0x37
+#define MPU9250_INT_ENABLE		0x38
 
 //#define INFO             0x01
 #define AK8963_ST1       0x02  // data ready status bit 0
@@ -63,6 +64,7 @@
 //#define AK8963_ZOUT_H	 0x08
 #define AK8963_ST2       0x09  // Data overflow bit 3 and data read error status bit 2
 #define AK8963_CNTL      0x0A  // Power down (0000), single-measurement (0001), self-test (1000) and Fuse ROM (1111) modes on bits 3:0
+//#define AK8963_CNTL2      0x0B  // soft reset
 //#define AK8963_ASTC      0x0C  // Self test control
 //#define AK8963_I2CDIS    0x0F  // I2C disable
 #define AK8963_ASAX      0x10  // Fuse ROM x-axis sensitivity adjustment value
@@ -93,21 +95,35 @@ public:
 
 	bool InitSensors();
 
+	bool UpdateBMP280();
+
 	double getPressureHpa();
 	double getAltitude();
 	double getTemp1();  // get temperature from BMP280
-	double getHeading();
 
-	bool getMagneto(double* magneto);
-	bool getHeading(double* heading);
-	bool getGyro(double* gyro);
-	bool getAccel(double* accel);
-	bool getAngle(double* angle);
+	bool UpdateMagneto();
+	bool UpdateHeading();
+	bool UpdateGyro();
+	bool UpdateAccel();
+	bool UpdateAccAngle();
+	bool UpdateTemp2();
+
 	double getTemp2(); // get temperature from MPU9250
 
-	uint avg = 4;
+	const uint avgFactor = 1;
 
+	double Acceleration[3] = { 0.0, 0.0, 0.0 }; // acceleratiopn X, Y, Z
+	double AccAngle[3] = { 0.0, 0.0, 0.0 };
+	double Gyroscope[3] = { 0.0, 0.0, 0.0 };
+	double Magneto[3] = { 0.0, 0.0, 0.0 };
+	double MagHeading[3] = { 0.0, 0.0, 0.0 };
+	
 private:
+	double Pressure;
+	double PresAltitude;
+	double Temp1;
+	double Temp2;
+
 	class BMP280Calib* BMPCal;
 	class MPU9250Calib* MPU9250Cal;
 	int file;   // The I2C handler
@@ -121,6 +137,7 @@ private:
 
 	int ReadChars(char I2cAddress, char regAddress, char* data, int nbrChars);
 	int WriteChars(char I2cAddress, char regAddress, char* data, int nbrChars);
+
 };
 
 class BMP280Calib
@@ -150,7 +167,7 @@ public:
 	//const double MPU9250gRes = 2000.0 / 32768.0;
 
 	// Proper scale to return milliGauss
-	//MPU9250mRes = 10. * 4912. / 8190.; // 14bit
+	//const double MPU9250mRes = 10. * 4912. / 8190.; // 14bit
 	const double MPU9250mRes = 10.0 * 4912.0 / 32760.0; // 16bit
 
 

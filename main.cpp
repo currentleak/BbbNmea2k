@@ -16,7 +16,7 @@
 #include "BbbCan.h"
 
 #define NO_RCV_CAN
-#define NO_RPT_CAN_WRITE
+//#define NO_RPT_CAN_WRITE
 
 using namespace std;
 
@@ -24,21 +24,22 @@ int main()
 {
     BbbSensors* Sensors = new BbbSensors();  // Class: sensors for Beaglebone Blue I2C devices
     BbbCan* CanBus = new BbbCan();
-    //void rn(); // BbbCan* can, MsgNMEA2k* msg);
+    void ReadAllI2cSensors(BbbSensors * Sensors);
 
-    cout << "BbbNmea2k... " ;
+    cout << "BbbNmea2k : BeagleBone Blue I2C sensors reader to CAN bus NMEA 2000 writer" << endl;
+    cout << "DST800 NMEA 2000 CAN reader to BeagleBone Data out: console, SPI LCD, SSH... " << endl;
     // init I2C sensors on Beaglebone blue
-    if (!Sensors->InitSensors())
+    if (!Sensors->InitSensors())  // I2C sensors
     {
         cout << "Error can not access sensors on I2C bus." << endl;
         return 1;
     }
     else
     {
-        cout << "I2C Sensors ok, "; // << endl;
+        cout << "I2C Sensors ok, ";
     }
     // init CAN bus on Beaglebone blue
-    if (!CanBus->InitCan())
+    if (!CanBus->InitCan())  // CAN Bus
     {
         cout << "Error can not access CAN bus." << endl;
         return 1;
@@ -48,17 +49,8 @@ int main()
         cout << "CAN bus ok!" << endl;
     }
 
-    double acceleration[3] = { 0.0, 0.0, 0.0 }; // acceleratiopn X, Y, Z
-    double angle[3] = { 0.0, 0.0, 0.0 };
-    double gyroscope[3] = { 0.0, 0.0, 0.0 };
-    double magneto[3] = { 0.0, 0.0, 0.0 };
-    double heading[3] = { 0.0, 0.0, 0.0 };
+    ReadAllI2cSensors(Sensors);
 
-    ReadAllI2cSensors();
-
-    // CAN bus
-    cout << "BeagleBone Blue I2C sensors reader to CAN bus NMEA 2000 writer" << endl;
-    cout << "DST800 NMEA 2000 CAN reader to BeagleBone Data out: console, SPI LCD, SSH... " << endl;
     int counter = 0;
     pid_t pid = fork();
     if (pid == 0)
@@ -82,22 +74,25 @@ int main()
         {
 #endif // NO_RPT_CAN_WRITE
 
-
-            CanBus->WriteHeading(Sensors->getHeading());
-            usleep(250000);
-
-            const int avg = 8;
+          ReadAllI2cSensors(Sensors);
+            double h = 0.0;
             double a = 0.0;
-            for (int i = 0; i < avg; i++)
+            for (int i = 0; i < Sensors->avgFactor; i++)
             {
                 usleep(1000);
-                Sensors->getAngle(angle);
-                a = a + angle[0];
+                Sensors->UpdateAccAngle();
+                a = a + Sensors->AccAngle[0]; // 0 -> X, 1 -> Y, 2 -> Z
+                Sensors->UpdateHeading();
+                h = h + Sensors->MagHeading[0]; // 0 -> X, 1 -> Y, 2 -> Z
             }
-            a = a / avg;
+            a = a / Sensors->avgFactor;
+            h = h / Sensors->avgFactor;
 
             CanBus->WriteRoll(a);
-            usleep(250000);
+            usleep(10000);
+            CanBus->WriteHeading(h);
+
+            usleep(400000);
 #ifndef NO_RPT_CAN_WRITE
         }
 #endif // NO_RPT_CAN_WRITE
@@ -114,10 +109,11 @@ int main()
     return 0;
 }
 
-void ReadAllI2cSensors()
+void ReadAllI2cSensors(BbbSensors* Sensors)
 {
     // get sensors values from BMP280
     cout << " BMP280 Temperature and Pressure Sensors" << endl;
+    Sensors->UpdateBMP280();
     printf("   Temp1    : %6.1f degC\n", Sensors->getTemp1());
     printf("   Pressure : %6.1f hpa\n", Sensors->getPressureHpa());
     // get altitude
@@ -125,34 +121,36 @@ void ReadAllI2cSensors()
 
     // get sensors values from MPU9250
     cout << " MPU9250 Temperature, Accel, Gyro and Magneto Sensors" << endl;
+    Sensors->UpdateTemp2();
     printf("   Temp2    : %6.1f degC\n", Sensors->getTemp2());
 
-    // acceleration value in g
-    Sensors->getAccel(acceleration);
-    printf("   Accel X  : %6.3f g\n", acceleration[0]);
-    printf("   Accel Y  : %6.3f g\n", acceleration[1]);
-    printf("   Accel Z  : %6.3f g\n", acceleration[2]);
-    // angle/level value calculated from acceleration
-    Sensors->getAngle(angle);
-    printf("      Level X : %6.3f deg\n", angle[0]);
-    printf("      Level Y : %6.3f deg\n", angle[1]);
-    printf("      Level Z : %6.3f deg\n", angle[2]);
+    // Acceleration value in g
+    Sensors->UpdateAccel();
+    printf("   Accel X  : %6.3f g\n", Sensors->Acceleration[0]);
+    printf("   Accel Y  : %6.3f g\n", Sensors->Acceleration[1]);
+    printf("   Accel Z  : %6.3f g\n", Sensors->Acceleration[2]);
+    // Angle/level value calculated from Acceleration
+    usleep(50000);
+    Sensors->UpdateAccAngle();
+    printf("      Level X : %6.3f deg\n", Sensors->AccAngle[0]);
+    printf("      Level Y : %6.3f deg\n", Sensors->AccAngle[1]);
+    printf("      Level Z : %6.3f deg\n", Sensors->AccAngle[2]);
 
     // gyro value in degrees per second
-    Sensors->getGyro(gyroscope);
-    printf("   Gyro X  : %6.3f dps\n", gyroscope[0]);
-    printf("   Gyro Y  : %6.3f dps\n", gyroscope[1]);
-    printf("   Gyro Z  : %6.3f dps\n", gyroscope[2]);
+    Sensors->UpdateGyro();
+    printf("   Gyro X  : %6.3f dps\n", Sensors->Gyroscope[0]);
+    printf("   Gyro Y  : %6.3f dps\n", Sensors->Gyroscope[1]);
+    printf("   Gyro Z  : %6.3f dps\n", Sensors->Gyroscope[2]);
 
-    // magnetometer values in milliGauss
-    Sensors->getMagneto(magneto);
-    printf("   Mag X   : %6.3f mGauss\n", magneto[0]);
-    printf("   Mag Y   : %6.3f mGauss\n", magneto[1]);
-    printf("   Mag Z   : %6.3f mGauss\n", magneto[2]);
-    // get heading
-    printf("      heading : %6.2f deg\n", Sensors->getHeading());
-    Sensors->getHeading(heading);
-    printf("      hx : %6.2f deg\n", heading[0]);
-    printf("      hy : %6.2f deg\n", heading[1]);
-    printf("      hz : %6.2f deg\n", heading[2]);
+    // Magnetometer values in milliGauss
+    Sensors->UpdateMagneto();
+    printf("   Mag X   : %6.3f mGauss\n", Sensors->Magneto[0]);
+    printf("   Mag Y   : %6.3f mGauss\n", Sensors->Magneto[1]);
+    printf("   Mag Z   : %6.3f mGauss\n", Sensors->Magneto[2]);
+    // get Heading
+    usleep(50000);
+    Sensors->UpdateHeading();
+    printf("      hx : %6.2f deg\n", Sensors->MagHeading[0]);
+    printf("      hy : %6.2f deg\n", Sensors->MagHeading[1]);
+    printf("      hz : %6.2f deg\n", Sensors->MagHeading[2]);
 }
