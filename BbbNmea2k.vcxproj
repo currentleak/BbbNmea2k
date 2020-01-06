@@ -77,11 +77,13 @@
   <ItemGroup>
     <ClCompile Include="BbbCan.cpp" />
     <ClCompile Include="BbbSensors.cpp" />
+    <ClCompile Include="IndicatorSpi.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BbbCan.h" />
     <ClInclude Include="BbbSensors.h" />
+    <ClInclude Include="IndicatorSpi.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>

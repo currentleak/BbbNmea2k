@@ -24,10 +24,12 @@ int main()
 {
     BbbSensors* Sensors = new BbbSensors();  // Class: sensors for Beaglebone Blue I2C devices
     BbbCan* CanBus = new BbbCan();
+    
     void ReadAllI2cSensors(BbbSensors * Sensors);
 
     cout << "BbbNmea2k : BeagleBone Blue I2C sensors reader to CAN bus NMEA 2000 writer" << endl;
     cout << "DST800 NMEA 2000 CAN reader to BeagleBone Data out: console, SPI LCD, SSH... " << endl;
+
     // init I2C sensors on Beaglebone blue
     if (!Sensors->InitSensors())  // I2C sensors
     {
@@ -36,6 +38,7 @@ int main()
     }
     else
     {
+        ReadAllI2cSensors(Sensors);
         cout << "I2C Sensors ok, ";
     }
     // init CAN bus on Beaglebone blue
@@ -49,7 +52,7 @@ int main()
         cout << "CAN bus ok!" << endl;
     }
 
-    ReadAllI2cSensors(Sensors);
+    
 
     int counter = 0;
     pid_t pid = fork();
